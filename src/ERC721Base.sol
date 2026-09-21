@@ -9,16 +9,12 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
  * @dev Base logic contract for EIP-1167 Minimal Proxies deployed via 0xTERM.
  */
 contract ERC721Base is Initializable, ERC721Upgradeable {
-    
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(
-        string memory name_, 
-        string memory symbol_
-    ) public initializer {
+    function initialize(string memory name_, string memory symbol_) public initializer {
         __ERC721_init(name_, symbol_);
     }
 }

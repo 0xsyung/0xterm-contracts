@@ -134,9 +134,8 @@ contract SimpleRouterTest is Test {
         uint256 expectedOut = _expectedOut(amountIn);
 
         vm.prank(alice);
-        uint256[] memory amounts = router.swapExactTokensForTokens(
-            amountIn, expectedOut, path, bob, block.timestamp + 1
-        );
+        uint256[] memory amounts =
+            router.swapExactTokensForTokens(amountIn, expectedOut, path, bob, block.timestamp + 1);
 
         assertEq(amounts[0], amountIn);
         assertEq(amounts[1], expectedOut);
@@ -163,9 +162,7 @@ contract SimpleRouterTest is Test {
         uint256 outC = _expectedOut(outB);
 
         vm.prank(alice);
-        uint256[] memory amounts = router.swapExactTokensForTokens(
-            amountIn, outC, path, bob, block.timestamp + 1
-        );
+        uint256[] memory amounts = router.swapExactTokensForTokens(amountIn, outC, path, bob, block.timestamp + 1);
 
         assertEq(amounts.length, 3);
         assertEq(amounts[1], outB);

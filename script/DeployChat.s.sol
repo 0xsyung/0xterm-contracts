@@ -30,10 +30,7 @@ contract DeployChat is Script {
         vm.startBroadcast();
 
         Chat impl = new Chat();
-        ERC1967Proxy proxy = new ERC1967Proxy(
-            address(impl),
-            abi.encodeCall(Chat.initialize, (INITIAL_FEE, "lobby"))
-        );
+        ERC1967Proxy proxy = new ERC1967Proxy(address(impl), abi.encodeCall(Chat.initialize, (INITIAL_FEE, "lobby")));
 
         vm.stopBroadcast();
 
