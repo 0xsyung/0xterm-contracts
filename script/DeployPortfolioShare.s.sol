@@ -26,8 +26,7 @@ contract DeployPortfolioShare is Script {
         vm.startBroadcast();
 
         PortfolioShare impl = new PortfolioShare();
-        ERC1967Proxy proxy =
-            new ERC1967Proxy(address(impl), abi.encodeCall(PortfolioShare.initialize, (INITIAL_FEE)));
+        ERC1967Proxy proxy = new ERC1967Proxy(address(impl), abi.encodeCall(PortfolioShare.initialize, (INITIAL_FEE)));
 
         vm.stopBroadcast();
 

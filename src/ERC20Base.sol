@@ -17,11 +17,7 @@ contract ERC20Base is Initializable, ERC20Upgradeable {
         _disableInitializers();
     }
 
-    function initialize(
-        string memory name_, 
-        string memory symbol_, 
-        uint8 decimals_
-    ) public initializer {
+    function initialize(string memory name_, string memory symbol_, uint8 decimals_) public initializer {
         __ERC20_init(name_, symbol_);
         _customDecimals = decimals_;
     }

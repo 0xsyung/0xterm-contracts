@@ -17,12 +17,7 @@ contract ChatFactory is Ownable {
 
     address public implementation;
 
-    event ChannelCreated(
-        address indexed channel,
-        address indexed deployer,
-        string name,
-        uint256 fee
-    );
+    event ChannelCreated(address indexed channel, address indexed deployer, string name, uint256 fee);
     event ImplementationUpdated(address indexed implementation);
 
     constructor(address implementation_) Ownable(msg.sender) {

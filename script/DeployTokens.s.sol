@@ -7,7 +7,7 @@ import "../src/MockToken.sol";
 /**
  * @title DeployTokens
  * @dev Script to deploy mockUSDC and mockDAI tokens
- * 
+ *
  * Usage:
  * forge script script/DeployTokens.s.sol --rpc-url <RPC_URL> --private-key <PRIVATE_KEY> --broadcast
  */
@@ -19,19 +19,19 @@ contract DeployTokens is Script {
         // Deploy mockUSDC
         // USDC typically has 6 decimal places and a large supply
         MockToken usdc = new MockToken(
-            "USD Coin",           // name
-            "USDC",               // symbol
-            6,                    // decimals
-            1_000_000             // initial supply: 1,000,000 USDC
+            "USD Coin", // name
+            "USDC", // symbol
+            6, // decimals
+            1_000_000 // initial supply: 1,000,000 USDC
         );
 
         // Deploy mockDAI
         // DAI has 18 decimal places and a large supply
         MockToken dai = new MockToken(
-            "Dai Stablecoin",     // name
-            "DAI",                // symbol
-            18,                   // decimals
-            1_000_000             // initial supply: 1,000,000 DAI
+            "Dai Stablecoin", // name
+            "DAI", // symbol
+            18, // decimals
+            1_000_000 // initial supply: 1,000,000 DAI
         );
 
         // Stop broadcasting
