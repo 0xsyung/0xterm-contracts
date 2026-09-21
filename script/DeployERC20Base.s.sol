@@ -27,11 +27,8 @@ contract DeployERC20Base is Script {
         // delegatecall only happens for real calls, so it works even when the
         // logic contract has no permissive fallback.
         bytes20 impl = bytes20(address(implementation));
-        bytes memory runtimeCode = abi.encodePacked(
-            hex"3d602d80600a3d3981f3363d3d373d3d3d363d73",
-            impl,
-            hex"5af43d82803e903d91602b57fd5bf3"
-        );
+        bytes memory runtimeCode =
+            abi.encodePacked(hex"3d602d80600a3d3981f3363d3d373d3d3d363d73", impl, hex"5af43d82803e903d91602b57fd5bf3");
 
         address proxy;
         assembly {

@@ -50,13 +50,7 @@ contract Chat is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     // layout so a UUPS upgrade of an older proxy keeps prior slots intact.
     string private _name;
 
-    event MessageSent(
-        address indexed from,
-        address indexed to,
-        bytes32 indexed id,
-        uint256 timestamp,
-        uint256 len
-    );
+    event MessageSent(address indexed from, address indexed to, bytes32 indexed id, uint256 timestamp, uint256 len);
     event FeeChanged(uint256 newFee);
     event FeeWithdrawn(address indexed to, uint256 amount);
     event PublicKeyRegistered(address indexed who, bytes key);
@@ -90,12 +84,11 @@ contract Chat is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      *        recipient can derive the ECDH shared secret and decrypt
      * @param ciphertext encrypted message bytes (ciphertext ‖ auth tag)
      */
-    function sendMessage(
-        address to,
-        bytes12 iv,
-        bytes calldata senderKey,
-        bytes calldata ciphertext
-    ) external payable returns (bytes32 id) {
+    function sendMessage(address to, bytes12 iv, bytes calldata senderKey, bytes calldata ciphertext)
+        external
+        payable
+        returns (bytes32 id)
+    {
         require(msg.value >= fee, "Chat: fee too low");
         require(ciphertext.length > 0, "Chat: empty message");
         require(senderKey.length == 33, "Chat: invalid sender key");
@@ -108,11 +101,7 @@ contract Chat is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         id = keccak256(abi.encodePacked(messageCount++, to, iv, senderKey, ciphertext));
         inbox[to][msg.sender].push(
             Message({
-                from: msg.sender,
-                timestamp: block.timestamp,
-                iv: iv,
-                senderKey: senderKey,
-                ciphertext: ciphertext
+                from: msg.sender, timestamp: block.timestamp, iv: iv, senderKey: senderKey, ciphertext: ciphertext
             })
         );
         _addSender(to, msg.sender);
@@ -159,12 +148,11 @@ contract Chat is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     /**
      * @notice Read a slice of the `to` ↔ `from` thread (oldest first).
      */
-    function getThread(
-        address to,
-        address from,
-        uint256 start,
-        uint256 count
-    ) external view returns (Message[] memory msgs) {
+    function getThread(address to, address from, uint256 start, uint256 count)
+        external
+        view
+        returns (Message[] memory msgs)
+    {
         Message[] storage thread = inbox[to][from];
         if (start >= thread.length) return new Message[](0);
         uint256 end = start + count;
@@ -198,7 +186,7 @@ contract Chat is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         require(to != address(0), "Chat: zero address");
         uint256 bal = address(this).balance;
         require(bal > 0, "Chat: nothing to withdraw");
-        (bool ok, ) = payable(to).call{value: bal}("");
+        (bool ok,) = payable(to).call{value: bal}("");
         require(ok, "Chat: withdraw failed");
         emit FeeWithdrawn(to, bal);
     }

@@ -67,11 +67,7 @@ contract PortfolioShare is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         emit Unshared(msg.sender);
     }
 
-    function get(address owner)
-        external
-        view
-        returns (bytes memory card, bool isActive, uint256 updatedAt_)
-    {
+    function get(address owner) external view returns (bytes memory card, bool isActive, uint256 updatedAt_) {
         return (cards[owner], active[owner], updatedAt[owner]);
     }
 

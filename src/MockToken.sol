@@ -24,12 +24,7 @@ contract MockToken {
      * @param _decimals The number of decimal places
      * @param _initialSupply The initial supply of tokens (will be minted to deployer)
      */
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        uint8 _decimals,
-        uint256 _initialSupply
-    ) {
+    constructor(string memory _name, string memory _symbol, uint8 _decimals, uint256 _initialSupply) {
         name = _name;
         symbol = _symbol;
         decimals = _decimals;
@@ -61,11 +56,7 @@ contract MockToken {
      * @param _value The amount of tokens to transfer
      * @return success True if transfer was successful
      */
-    function transferFrom(
-        address _from,
-        address _to,
-        uint256 _value
-    ) public returns (bool success) {
+    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
         require(_to != address(0), "Invalid address");
         require(balanceOf[_from] >= _value, "Insufficient balance");
         require(allowance[_from][msg.sender] >= _value, "Allowance exceeded");

@@ -16,9 +16,8 @@ contract PortfolioShareTest is Test {
 
     function setUp() public {
         PortfolioShare impl = new PortfolioShare();
-        share = PortfolioShare(
-            address(new ERC1967Proxy(address(impl), abi.encodeCall(PortfolioShare.initialize, (FEE))))
-        );
+        share =
+            PortfolioShare(address(new ERC1967Proxy(address(impl), abi.encodeCall(PortfolioShare.initialize, (FEE)))));
     }
 
     function shareAs(address sender, bytes memory card) internal {

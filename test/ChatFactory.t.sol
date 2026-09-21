@@ -95,9 +95,7 @@ contract ChatFactoryTest is Test {
         // Measure UUPS path: new impl + proxy + initialize (legacy DeployChat)
         uint256 g1 = gasleft();
         Chat uupsImpl = new Chat();
-        address proxy = address(
-            new ERC1967Proxy(address(uupsImpl), abi.encodeCall(Chat.initialize, (FEE, "gas-uups")))
-        );
+        address proxy = address(new ERC1967Proxy(address(uupsImpl), abi.encodeCall(Chat.initialize, (FEE, "gas-uups"))));
         uint256 uupsGas = g1 - gasleft();
         proxy;
 
