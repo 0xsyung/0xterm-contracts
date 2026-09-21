@@ -1,0 +1,18 @@
+{
+  "name": "0xterm Contracts (Foundry)",
+  "image": "mcr.microsoft.com/devcontainers/base:debian",
+  "remoteEnv": {
+    "PATH": "/home/vscode/.foundry/bin:${containerEnv:PATH}"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.formatOnSave": true
+      },
+      "extensions": [
+        "JuanBlanco.solidity"
+      ]
+    }
+  },
+  "postCreateCommand": "git submodule update --init --recursive && bash -c 'curl -L https://foundry.paradigm.xyz | bash && /home/vscode/.foundry/bin/foundryup'"
+}
