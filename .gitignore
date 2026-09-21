@@ -1,0 +1,20 @@
+# Compiler files
+cache/
+out/
+out-univ2/
+out-univ3/
+
+# Commonly ignored directories
+.logs/
+.ignore/
+
+# Ignores broadcast logs (deploy receipts, per-chain)
+/broadcast/
+
+# Docs
+docs/
+
+# Dotenv file
+.env
+.env.*
+!.env.example
