@@ -33,3 +33,6 @@ jobs:
 
       - name: Run Forge tests
         run: forge test -vvv
+
+      - name: Run Forge tests (chat profile / deploy path)
+        run: FOUNDRY_PROFILE=chat forge test -vvv
