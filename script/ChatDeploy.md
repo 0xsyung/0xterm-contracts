@@ -56,9 +56,15 @@ cast wallet address <account-name>
 
 ## 3. Dry-run first (no broadcast, no gas)
 
+Use the `chat` profile — live Sepolia charges ~1.56M gas per KB of initcode
+(measured via `eth_estimateGas`, ~1,560 gas/byte — far above anvil's ~200
+gas/byte model), so the default unoptimized build OOGs the CREATE. The `chat`
+profile (optimizer + viaIR) is required.
+
 ```bash
 cd contracts
 export SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
+export FOUNDRY_PROFILE=chat
 
 forge script script/DeployChat.s.sol \
   --rpc-url $SEPOLIA_RPC_URL \
@@ -68,7 +74,10 @@ forge script script/DeployChat.s.sol \
 ```
 
 This simulates the deployment and prints the predicted contract address + gas.
-`--slow` reports gas per call.
+`--slow` reports gas per call. Always dry-run against a **live** RPC first:
+anvil's local estimate (~1.5M for the Chat impl) is ~10x lower than the real
+on-chain requirement (~11.4M with the chat profile), so a local-only check can
+miss a deploy that reverts on Sepolia.
 
 ## 4. Broadcast for real
 
@@ -79,6 +88,11 @@ forge script script/DeployChat.s.sol \
   --sender <YOUR_ADDRESS> \
   --broadcast --slow
 ```
+
+`FOUNDRY_PROFILE=chat` from the previous step stays set for this shell.
+If the CREATE exceeds the block gas limit, fall back to a slightly higher gas
+multiplier (the 13.6M failure in #174 needed `-g 800` before the viaIR shrink;
+with the `chat` profile the simulated need is ~11.4M).
 
 The terminal will prompt for the keystore password, then submit the deployment
 and print `Chat proxy deployed at: <address>` (the proxy is what callers use;
