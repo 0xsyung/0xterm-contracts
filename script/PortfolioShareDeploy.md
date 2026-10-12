@@ -49,9 +49,15 @@ cast wallet address <account-name>
 
 ## 3. Dry-run first (no broadcast, no gas)
 
+Use the `chat` profile — live Sepolia charges ~1.56M gas per KB of initcode
+(measured via `eth_estimateGas`), far above anvil's ~200 gas/byte model, so the
+default unoptimized build can OOG the CREATE. The `chat` profile (optimizer +
+viaIR) shrinks PortfolioShare creation gas from ~8.7M to ~7.2M.
+
 ```bash
 cd contracts
 export SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
+export FOUNDRY_PROFILE=chat
 
 forge script script/DeployPortfolioShare.s.sol \
   --rpc-url $SEPOLIA_RPC_URL \
