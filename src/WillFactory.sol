@@ -23,9 +23,7 @@ contract WillFactory {
     error HeirIsOwner();
     error VaultExists();
 
-    event VaultCreated(
-        address indexed owner, address indexed vault, address indexed heir, uint64 delaySeconds
-    );
+    event VaultCreated(address indexed owner, address indexed vault, address indexed heir, uint64 delaySeconds);
 
     constructor(address implementation_) {
         if (implementation_ == address(0)) revert ZeroAddress();
