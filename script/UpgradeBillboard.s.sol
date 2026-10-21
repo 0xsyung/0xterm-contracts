@@ -6,31 +6,25 @@ import "../src/Billboard.sol";
 
 /**
  * @title UpgradeBillboard
- * @dev UUPS upgrade: deploy a new Billboard implementation and point the
- *      existing proxy at it via upgradeToAndCall(newImpl, ""). The proxy owns
- *      the storage, so ALL posts are preserved.
- *
- *      Only the proxy owner (the --sender that deployed) may run this.
- *
- * Usage:
- *   forge script script/UpgradeBillboard.s.sol:UpgradeBillboard \
- *     --rpc-url $RPC_URL --account <account-name> --sender <OWNER_ADDRESS> \
- *     --sig "run(address)" <PROXY_ADDRESS> --broadcast --slow
- *
- *   (Keep the storage layout identical — new fields must be APPENDED at the
- *   end, never reordered or renamed. See script/BillboardDeploy.md.)
+ * @dev Soft ACK #139 slice 2: Billboard(proPass) upgrade.
+ *      --sig "run(address,address)" <PROXY> <PRO_PASS>
+ *      Bare vm.startBroadcast for --account (no PRIVATE_KEY).
  */
 contract UpgradeBillboard is Script {
-    function run(address proxyAddr) external returns (address newImpl) {
+    function run(address proxyAddr, address proPass) external returns (address newImpl) {
+        require(proPass != address(0), "UpgradeBillboard: zero proPass");
         vm.startBroadcast();
 
-        Billboard newImplContract = new Billboard();
+        Billboard newImplContract = new Billboard(proPass);
         Billboard(proxyAddr).upgradeToAndCall(address(newImplContract), "");
 
         vm.stopBroadcast();
 
         console.log("Billboard upgraded. Proxy:", proxyAddr);
         console.log("New implementation at:", address(newImplContract));
+        console.log("ProPass:", address(Billboard(proxyAddr).proPass()));
         console.log("Owner:", Billboard(proxyAddr).owner());
+
+        return address(newImplContract);
     }
 }

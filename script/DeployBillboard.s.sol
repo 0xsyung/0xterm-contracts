@@ -7,37 +7,26 @@ import "../src/Billboard.sol";
 
 /**
  * @title DeployBillboard
- * @dev Deploys the upgradeable Billboard: a UUPS implementation + an
- *      ERC1967Proxy that owns the storage (the public post ledger). The proxy
- *      is what callers talk to; its address differs per chain (plain CREATE),
- *      so wire the per-chain proxy address into the frontend BILLBOARD_CONTRACT.
- *
- *      Upgrades later swap only the implementation via upgradeToAndCall() — the
- *      proxy (and therefore all posts) stays put. See UpgradeBillboard.s.sol
- *      and script/BillboardDeploy.md.
- *
- * Usage (testnet only — see script/BillboardDeploy.md):
- *   export SEPOLIA_RPC_URL=...
- *   forge script script/DeployBillboard.s.sol \
- *     --rpc-url $SEPOLIA_RPC_URL --account <account-name> --sender <YOUR_ADDRESS>
- *   # dry-run, then re-run with --broadcast on each chain
+ * @dev Soft ACK #139 slice 2: Billboard impl takes ProPass proxy.
+ *      Usage: forge script ... --sig "run(address)" <PRO_PASS_PROXY>
+ *      Bare vm.startBroadcast for --account (no PRIVATE_KEY).
  */
 contract DeployBillboard is Script {
-    // 0.0001 ETH in wei
     uint256 constant INITIAL_FEE = 100000000000000;
 
-    function run() external {
+    function run(address proPass) external {
+        require(proPass != address(0), "DeployBillboard: zero proPass");
         vm.startBroadcast();
 
-        Billboard impl = new Billboard();
+        Billboard impl = new Billboard(proPass);
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), abi.encodeCall(Billboard.initialize, (INITIAL_FEE)));
 
         vm.stopBroadcast();
 
         console.log("Billboard proxy deployed at:", address(proxy));
         console.log("Billboard implementation at:", address(impl));
+        console.log("ProPass:", address(Billboard(address(proxy)).proPass()));
         console.log("Initial fee (wei):", Billboard(address(proxy)).fee());
         console.log("Owner:", Billboard(address(proxy)).owner());
-        console.log("Upgradeable: YES (UUPS - use UpgradeBillboard.s.sol to upgrade)");
     }
 }

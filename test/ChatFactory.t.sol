@@ -5,8 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Chat} from "../src/Chat.sol";
 import {ChatFactory} from "../src/ChatFactory.sol";
+import {ProPassTestHelper} from "./ProPassTestHelper.sol";
 
-contract ChatFactoryTest is Test {
+contract ChatFactoryTest is ProPassTestHelper {
     ChatFactory factory;
     Chat impl;
     address alice = makeAddr("alice");
@@ -17,8 +18,12 @@ contract ChatFactoryTest is Test {
     bytes constant SENDER_KEY = hex"020000000000000000000000000000000000000000000000000000000000000000";
 
     function setUp() public {
-        impl = new Chat();
-        factory = new ChatFactory(address(impl));
+        deployProPass();
+        buyPro(address(this), 1);
+        buyPro(alice, 1);
+        buyPro(bob, 1);
+        impl = new Chat(address(proPass));
+        factory = new ChatFactory(address(impl), address(proPass));
     }
 
     function test_Factory_ImplementationView() public view {
@@ -32,6 +37,14 @@ contract ChatFactoryTest is Test {
         assertEq(chat.name(), "lobby");
         assertEq(chat.fee(), FEE);
         assertEq(chat.owner(), alice);
+        assertEq(address(chat.proPass()), address(proPass));
+    }
+
+    function test_Factory_Deploy_NotPro_Reverts() public {
+        address stranger = makeAddr("stranger");
+        vm.prank(stranger);
+        vm.expectRevert("ChatFactory: not Pro");
+        factory.deploy("nope", FEE);
     }
 
     function test_Factory_NameImmutable_EmptyAndLongRevert() public {
@@ -74,32 +87,27 @@ contract ChatFactoryTest is Test {
     }
 
     function test_Factory_OwnerCanUpdateImplementation_FutureOnly() public {
-        Chat impl2 = new Chat();
+        Chat impl2 = new Chat(address(proPass));
         factory.setImplementation(address(impl2));
         assertEq(factory.implementation(), address(impl2));
 
         address oldChannel = factory.deploy("old", FEE);
-        // old channel still works (delegates to whatever was baked into clone bytecode —
-        // actually EIP-1167 embeds impl address at deploy time, so this clone uses impl2)
         assertEq(Chat(oldChannel).name(), "old");
     }
 
     /// Gas: EIP-1167 factory deploy vs legacy UUPS proxy+impl path (same impl contract).
     function test_Gas_CloneVsUups() public {
-        // Measure clone path (factory already has impl)
         uint256 g0 = gasleft();
         address clone = factory.deploy("gas-clone", FEE);
         uint256 cloneGas = g0 - gasleft();
-        clone; // silence
+        clone;
 
-        // Measure UUPS path: new impl + proxy + initialize (legacy DeployChat)
         uint256 g1 = gasleft();
-        Chat uupsImpl = new Chat();
+        Chat uupsImpl = new Chat(address(proPass));
         address proxy = address(new ERC1967Proxy(address(uupsImpl), abi.encodeCall(Chat.initialize, (FEE, "gas-uups"))));
         uint256 uupsGas = g1 - gasleft();
         proxy;
 
-        // Emit via assertTrue so -vvvv shows values in traces; also log
         emit log_named_uint("clone_deploy_gas", cloneGas);
         emit log_named_uint("uups_impl_plus_proxy_gas", uupsGas);
         assertTrue(cloneGas < uupsGas, "clone should be cheaper than full UUPS path");

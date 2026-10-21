@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {IProPass} from "./IProPass.sol";
 
 /**
  * @title Billboard
@@ -18,6 +19,8 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  *      while keeping all posts.
  */
 contract Billboard is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+    IProPass public immutable proPass;
+
     uint256 public fee;
 
     struct Post {
@@ -35,11 +38,18 @@ contract Billboard is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     event FeeWithdrawn(address indexed to, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor(address proPass_) {
+        require(proPass_ != address(0), "Billboard: zero proPass");
+        proPass = IProPass(proPass_);
         // Implementation is deployed directly (not through a proxy), so it
         // must not be initializable — locks it forever to prevent a
         // logic-level hijack. Only the proxy is initialized via initialize().
         _disableInitializers();
+    }
+
+    modifier onlyPro() {
+        require(proPass.isPro(msg.sender), "Billboard: not Pro");
+        _;
     }
 
     function initialize(uint256 initialFee) public initializer {
@@ -52,7 +62,7 @@ contract Billboard is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      *         (>= `fee`) deters spam.
      * @return id index of the new post in the ledger (0-based)
      */
-    function post(string calldata content) external payable returns (uint256 id) {
+    function post(string calldata content) external payable onlyPro returns (uint256 id) {
         require(msg.value >= fee, "Billboard: fee too low");
         require(bytes(content).length > 0, "Billboard: empty post");
 

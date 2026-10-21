@@ -11,6 +11,8 @@ import {EnsRegistry} from "../src/EnsRegistry.sol";
 contract EnsRegistryV2 is EnsRegistry {
     uint256 public versionTag;
 
+    constructor(address proPass_) EnsRegistry(proPass_) {}
+
     function setVersionTag(uint256 x) external {
         versionTag = x;
     }

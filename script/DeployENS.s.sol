@@ -7,36 +7,23 @@ import "../src/EnsRegistry.sol";
 
 /**
  * @title DeployENS
- * @dev Deploys 0xterm's own ENS registry + resolver (testnets only): a UUPS
- *      implementation + an ERC1967Proxy that owns the storage (name records).
- *      The proxy is what callers talk to; its address differs per chain (plain
- *      CREATE), so wire the per-chain proxy address into the frontend ENS_CONTRACT.
- *
- *      Upgrades later swap only the implementation via upgradeToAndCall() — the
- *      proxy (and therefore every record) stays put.
- *
- *      Records are owner-only for now: after deploy, register test names with
- *      `cast send <proxy> "setRecord(bytes32,address,string)" ...`
- *      (see script/EnsDeploy.md for full examples).
- *
- * Usage (testnet only — see script/EnsDeploy.md):
- *   export SEPOLIA_RPC_URL=...
- *   forge script script/DeployENS.s.sol \
- *     --rpc-url $SEPOLIA_RPC_URL --account <account-name> --sender <YOUR_ADDRESS>
- *   # dry-run, then re-run with --broadcast on each chain
+ * @dev Soft ACK #139 slice 2: EnsRegistry impl takes ProPass proxy.
+ *      Usage: forge script ... --sig "run(address)" <PRO_PASS_PROXY>
+ *      Bare vm.startBroadcast for --account (no PRIVATE_KEY).
  */
 contract DeployENS is Script {
-    function run() external {
+    function run(address proPass) external {
+        require(proPass != address(0), "DeployENS: zero proPass");
         vm.startBroadcast();
 
-        EnsRegistry impl = new EnsRegistry();
+        EnsRegistry impl = new EnsRegistry(proPass);
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), abi.encodeCall(EnsRegistry.initialize, ()));
 
         vm.stopBroadcast();
 
         console.log("ENS proxy deployed at:", address(proxy));
         console.log("ENS implementation at:", address(impl));
+        console.log("ProPass:", address(EnsRegistry(address(proxy)).proPass()));
         console.log("Owner:", EnsRegistry(address(proxy)).owner());
-        console.log("Upgradeable: YES (UUPS - use UpgradeENS.s.sol to upgrade)");
     }
 }

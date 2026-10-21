@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {IProPass} from "./IProPass.sol";
 
 /**
  * @title PortfolioShare
@@ -15,6 +16,8 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  *      The PROXY owns the storage, so the share ledger survives logic upgrades.
  */
 contract PortfolioShare is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+    IProPass public immutable proPass;
+
     uint256 public fee;
 
     mapping(address => bytes) private cards;
@@ -32,8 +35,15 @@ contract PortfolioShare is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     event FeeWithdrawn(address indexed to, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor(address proPass_) {
+        require(proPass_ != address(0), "PortfolioShare: zero proPass");
+        proPass = IProPass(proPass_);
         _disableInitializers();
+    }
+
+    modifier onlyPro() {
+        require(proPass.isPro(msg.sender), "PortfolioShare: not Pro");
+        _;
     }
 
     function initialize(uint256 initialFee) public initializer {
@@ -45,7 +55,7 @@ contract PortfolioShare is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      * @notice Publish or replace the caller's share card. Pays >= `fee`.
      *         The owner is always msg.sender — cannot share as another address.
      */
-    function share(bytes calldata card) external payable {
+    function share(bytes calldata card) external payable onlyPro {
         require(msg.value >= fee, "PortfolioShare: fee too low");
         require(card.length > 0, "PortfolioShare: empty card");
 
@@ -61,7 +71,7 @@ contract PortfolioShare is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      * @notice Revoke the caller's public share. Card bytes stay so look can
      *         show REVOKED; get() returns active=false.
      */
-    function unshare() external {
+    function unshare() external onlyPro {
         require(updatedAt[msg.sender] != 0, "PortfolioShare: not shared");
         active[msg.sender] = false;
         emit Unshared(msg.sender);

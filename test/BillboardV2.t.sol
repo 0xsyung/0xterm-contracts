@@ -11,6 +11,8 @@ import {Billboard} from "../src/Billboard.sol";
 contract BillboardV2 is Billboard {
     uint256 public versionTag;
 
+    constructor(address proPass_) Billboard(proPass_) {}
+
     function setVersionTag(uint256 x) external {
         versionTag = x;
     }

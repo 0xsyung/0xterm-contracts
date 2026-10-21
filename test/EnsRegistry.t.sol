@@ -5,8 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {EnsRegistry} from "../src/EnsRegistry.sol";
 import {EnsRegistryV2} from "./EnsRegistryV2.t.sol";
+import {ProPassTestHelper} from "./ProPassTestHelper.sol";
 
-contract EnsRegistryTest is Test {
+contract EnsRegistryTest is ProPassTestHelper {
     EnsRegistry ens;
     address alice = makeAddr("alice");
     address bob = makeAddr("bob");
@@ -23,8 +24,12 @@ contract EnsRegistryTest is Test {
     receive() external payable {}
 
     function setUp() public {
-        EnsRegistry impl = new EnsRegistry();
+        deployProPass();
+        EnsRegistry impl = new EnsRegistry(address(proPass));
         ens = EnsRegistry(address(new ERC1967Proxy(address(impl), abi.encodeCall(EnsRegistry.initialize, ()))));
+        buyPro(address(this), 1);
+        buyPro(alice, 1);
+        buyPro(bob, 1);
     }
 
     function test_Proxy_Owner() public view {
@@ -101,7 +106,7 @@ contract EnsRegistryTest is Test {
     function test_Upgrade_PreservesRecords() public {
         ens.setRecord(ALICE_NODE, alice, ALICE_NAME);
 
-        EnsRegistryV2 implV2 = new EnsRegistryV2();
+        EnsRegistryV2 implV2 = new EnsRegistryV2(address(proPass));
         ens.upgradeToAndCall(address(implV2), "");
 
         EnsRegistryV2(address(ens)).setVersionTag(12345);
@@ -111,9 +116,16 @@ contract EnsRegistryTest is Test {
     }
 
     function test_Upgrade_OnlyOwner_Reverts() public {
-        EnsRegistryV2 implV2 = new EnsRegistryV2();
+        EnsRegistryV2 implV2 = new EnsRegistryV2(address(proPass));
         vm.prank(alice);
         vm.expectRevert();
         ens.upgradeToAndCall(address(implV2), "");
+    }
+
+    function test_SetRecord_NotPro_Reverts() public {
+        address stranger = makeAddr("stranger");
+        vm.prank(stranger);
+        vm.expectRevert("ENS: not Pro");
+        ens.setRecord(ALICE_NODE, stranger, ALICE_NAME);
     }
 }

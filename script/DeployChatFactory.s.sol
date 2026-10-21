@@ -7,26 +7,25 @@ import "../src/ChatFactory.sol";
 
 /**
  * @title DeployChatFactory
- * @dev Deploys a shared Chat implementation + ChatFactory for EIP-1167 clones.
- *      Wire implementation + factory into frontend CHAT_IMPLEMENTATION / CHAT_FACTORY.
- *
- * Usage (testnet):
- *   forge script script/DeployChatFactory.s.sol \
- *     --rpc-url $SEPOLIA_RPC_URL --account <account-name> --sender <YOUR_ADDRESS>
+ * @dev Soft ACK #139 slice 2: Chat + factory both take ProPass proxy.
+ *      Usage: forge script ... --sig "run(address)" <PRO_PASS_PROXY>
+ *      Bare vm.startBroadcast for --account (no PRIVATE_KEY).
  */
 contract DeployChatFactory is Script {
-    uint256 constant INITIAL_FEE = 100000000000000; // documented default; clones pass their own
+    uint256 constant INITIAL_FEE = 100000000000000;
 
-    function run() external {
+    function run(address proPass) external {
+        require(proPass != address(0), "DeployChatFactory: zero proPass");
         vm.startBroadcast();
 
-        Chat impl = new Chat();
-        ChatFactory factory = new ChatFactory(address(impl));
+        Chat impl = new Chat(proPass);
+        ChatFactory factory = new ChatFactory(address(impl), proPass);
 
         vm.stopBroadcast();
 
         console.log("Chat implementation at:", address(impl));
         console.log("ChatFactory at:", address(factory));
+        console.log("ProPass:", proPass);
         console.log("Default fee hint (wei):", INITIAL_FEE);
         console.log("Factory owner:", factory.owner());
     }

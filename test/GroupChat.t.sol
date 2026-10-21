@@ -4,8 +4,9 @@ pragma solidity ^0.8.20;
 import {Test} from "forge-std/Test.sol";
 import {GroupChat} from "../src/GroupChat.sol";
 import {GroupChatFactory} from "../src/GroupChatFactory.sol";
+import {ProPassTestHelper} from "./ProPassTestHelper.sol";
 
-contract GroupChatTest is Test {
+contract GroupChatTest is ProPassTestHelper {
     GroupChat group;
     GroupChatFactory factory;
     uint256 constant FEE = 0.0001 ether;
@@ -25,8 +26,13 @@ contract GroupChatTest is Test {
         bob = vm.addr(bobKey);
         carol = vm.addr(carolKey);
 
-        GroupChat impl = new GroupChat();
-        factory = new GroupChatFactory(address(impl));
+        deployProPass();
+        buyPro(alice, 1);
+        buyPro(bob, 1);
+        buyPro(carol, 1);
+
+        GroupChat impl = new GroupChat(address(proPass));
+        factory = new GroupChatFactory(address(impl), address(proPass));
 
         vm.prank(alice);
         address g = factory.deploy("crew", FEE);
@@ -40,6 +46,14 @@ contract GroupChatTest is Test {
         assertTrue(group.alive());
         assertEq(group.name(), "crew");
         assertEq(group.fee(), FEE);
+        assertEq(address(group.proPass()), address(proPass));
+    }
+
+    function test_Factory_Deploy_NotPro_Reverts() public {
+        address stranger = makeAddr("stranger");
+        vm.prank(stranger);
+        vm.expectRevert("GroupChatFactory: not Pro");
+        factory.deploy("nope", FEE);
     }
 
     function test_InviteJoinLeave_TransferToOldest() public {
@@ -50,14 +64,12 @@ contract GroupChatTest is Test {
         assertTrue(group.isMember(bob));
         assertEq(group.memberCount(), 2);
 
-        // warp so carol joins later
         vm.warp(block.timestamp + 10);
         vm.prank(alice);
         group.invite(carol);
         vm.prank(carol);
         group.join();
 
-        // owner alice leaves → oldest remaining is bob
         vm.prank(alice);
         group.leave();
         assertFalse(group.isMember(alice));
@@ -86,6 +98,15 @@ contract GroupChatTest is Test {
         vm.prank(bob);
         vm.expectRevert("GroupChat: not a member");
         group.sendMessage(IV, SENDER_KEY, CT);
+    }
+
+    function test_SendMessage_NotPro_Reverts() public {
+        address stranger = makeAddr("stranger");
+        // even if somehow a member — gate fires first for non-Pro
+        vm.deal(stranger, FEE);
+        vm.prank(stranger);
+        vm.expectRevert("GroupChat: not Pro");
+        group.sendMessage{value: FEE}(IV, SENDER_KEY, CT);
     }
 
     function test_Invite_OwnerOnly() public {
