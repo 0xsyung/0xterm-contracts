@@ -34,7 +34,8 @@ contract DeployGasBudgetTest is Test {
 
     // viaIR build measured sizes + ~12% headroom (bytes of creation code).
     uint256 constant CHAT_BUDGET = 8_200; // 7312B measured
-    uint256 constant DEFAULT_BUDGET = 5_200; // 4507B largest non-Chat target
+    // Soft ACK #139 onlyPro immutable bumped PortfolioShare ~5272B; ~6% headroom.
+    uint256 constant DEFAULT_BUDGET = 5_600;
 
     modifier skipUnlessViaIR() {
         if (type(Chat).creationCode.length > VIAIR_DETECT) vm.skip(true, "not viaIR build (default profile)");

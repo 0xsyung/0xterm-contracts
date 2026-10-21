@@ -5,8 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Billboard} from "../src/Billboard.sol";
 import {BillboardV2} from "./BillboardV2.t.sol";
+import {ProPassTestHelper} from "./ProPassTestHelper.sol";
 
-contract BillboardTest is Test {
+contract BillboardTest is ProPassTestHelper {
     Billboard billboard;
     address alice = makeAddr("alice");
     address bob = makeAddr("bob");
@@ -15,8 +16,11 @@ contract BillboardTest is Test {
     receive() external payable {}
 
     function setUp() public {
-        Billboard impl = new Billboard();
+        deployProPass();
+        Billboard impl = new Billboard(address(proPass));
         billboard = Billboard(address(new ERC1967Proxy(address(impl), abi.encodeCall(Billboard.initialize, (FEE)))));
+        buyPro(alice, 1);
+        buyPro(bob, 1);
     }
 
     /// fund `sender` then prank-post on their behalf
@@ -156,7 +160,7 @@ contract BillboardTest is Test {
 
     /// only the owner can upgrade
     function test_Upgrade_OnlyOwner() public {
-        BillboardV2 implV2 = new BillboardV2();
+        BillboardV2 implV2 = new BillboardV2(address(proPass));
 
         vm.prank(alice);
         vm.expectRevert();
@@ -166,7 +170,7 @@ contract BillboardTest is Test {
     function test_Upgrade_PreservesPosts() public {
         postAs(alice, "keep me");
 
-        BillboardV2 implV2 = new BillboardV2();
+        BillboardV2 implV2 = new BillboardV2(address(proPass));
         billboard.upgradeToAndCall(address(implV2), "");
 
         BillboardV2(address(billboard)).setVersionTag(12345);
@@ -176,5 +180,13 @@ contract BillboardTest is Test {
         Billboard.Post memory p = billboard.getLatest(10, 0)[0];
         assertEq(p.author, alice);
         assertEq(p.content, "keep me");
+    }
+
+    function test_Post_NotPro_Reverts() public {
+        address stranger = makeAddr("stranger");
+        vm.deal(stranger, FEE);
+        vm.prank(stranger);
+        vm.expectRevert("Billboard: not Pro");
+        billboard.post{value: FEE}("nope");
     }
 }

@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {IProPass} from "./IProPass.sol";
 
 /**
  * @title GroupChat
@@ -16,6 +17,8 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  *      Deployed as EIP-1167 clones via GroupChatFactory (testnets only).
  */
 contract GroupChat is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+    IProPass public immutable proPass;
+
     uint256 public fee;
 
     struct Message {
@@ -53,8 +56,15 @@ contract GroupChat is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     event EnvelopeSet(address indexed who);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor(address proPass_) {
+        require(proPass_ != address(0), "GroupChat: zero proPass");
+        proPass = IProPass(proPass_);
         _disableInitializers();
+    }
+
+    modifier onlyPro() {
+        require(proPass.isPro(msg.sender), "GroupChat: not Pro");
+        _;
     }
 
     function initialize(uint256 initialFee, string calldata name_, address initialOwner) public initializer {
@@ -92,7 +102,7 @@ contract GroupChat is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         return _messages.length;
     }
 
-    function invite(address who) external onlyOwner {
+    function invite(address who) external onlyOwner onlyPro {
         require(_alive, "GroupChat: dead");
         require(who != address(0), "GroupChat: zero address");
         require(!_members[who].active, "GroupChat: already member");
@@ -100,7 +110,7 @@ contract GroupChat is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         emit MemberInvited(who);
     }
 
-    function join() external {
+    function join() external onlyPro {
         require(_alive, "GroupChat: dead");
         require(invited[msg.sender], "GroupChat: not invited");
         require(!_members[msg.sender].active, "GroupChat: already member");
@@ -108,7 +118,7 @@ contract GroupChat is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         _addMember(msg.sender);
     }
 
-    function leave() external {
+    function leave() external onlyPro {
         require(_members[msg.sender].active, "GroupChat: not a member");
         bool wasOwner = msg.sender == owner();
         _removeMember(msg.sender);
@@ -147,6 +157,7 @@ contract GroupChat is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function sendMessage(bytes12 iv, bytes calldata senderKey, bytes calldata ciphertext)
         external
         payable
+        onlyPro
         returns (bytes32 id)
     {
         require(_alive, "GroupChat: dead");
@@ -174,7 +185,7 @@ contract GroupChat is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         }
     }
 
-    function setPublicKey(bytes calldata key, uint8 v, bytes32 r, bytes32 s) external {
+    function setPublicKey(bytes calldata key, uint8 v, bytes32 r, bytes32 s) external onlyPro {
         require(key.length == 33, "GroupChat: invalid public key");
         bytes32 msgHash = keccak256(abi.encodePacked(block.chainid, msg.sender, key));
         bytes32 signedHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", msgHash));
@@ -189,7 +200,7 @@ contract GroupChat is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /// @notice Owner publishes a wrapped envelope secret for a member (joiners unwrap client-side).
-    function setEnvelope(address who, bytes calldata wrapped) external onlyOwner {
+    function setEnvelope(address who, bytes calldata wrapped) external onlyOwner onlyPro {
         require(_alive, "GroupChat: dead");
         require(who != address(0), "GroupChat: zero address");
         require(wrapped.length > 0, "GroupChat: empty envelope");

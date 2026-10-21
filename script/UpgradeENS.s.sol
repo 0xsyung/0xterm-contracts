@@ -6,31 +6,25 @@ import "../src/EnsRegistry.sol";
 
 /**
  * @title UpgradeENS
- * @dev UUPS upgrade: deploy a new EnsRegistry implementation and point the
- *      existing proxy at it via upgradeToAndCall(newImpl, ""). The proxy owns
- *      the storage, so ALL name records are preserved.
- *
- *      Only the proxy owner (the --sender that deployed) may run this.
- *
- * Usage:
- *   forge script script/UpgradeENS.s.sol:UpgradeENS \
- *     --rpc-url $RPC_URL --account <account-name> --sender <OWNER_ADDRESS> \
- *     --sig "run(address)" <PROXY_ADDRESS> --broadcast --slow
- *
- *   (Keep the storage layout identical — new fields must be APPENDED at the
- *   end, never reordered or renamed. See script/EnsDeploy.md.)
+ * @dev Soft ACK #139 slice 2: EnsRegistry(proPass) upgrade.
+ *      --sig "run(address,address)" <PROXY> <PRO_PASS>
+ *      Bare vm.startBroadcast for --account (no PRIVATE_KEY).
  */
 contract UpgradeENS is Script {
-    function run(address proxyAddr) external returns (address newImpl) {
+    function run(address proxyAddr, address proPass) external returns (address newImpl) {
+        require(proPass != address(0), "UpgradeENS: zero proPass");
         vm.startBroadcast();
 
-        EnsRegistry newImplContract = new EnsRegistry();
+        EnsRegistry newImplContract = new EnsRegistry(proPass);
         EnsRegistry(proxyAddr).upgradeToAndCall(address(newImplContract), "");
 
         vm.stopBroadcast();
 
         console.log("ENS upgraded. Proxy:", proxyAddr);
         console.log("New implementation at:", address(newImplContract));
+        console.log("ProPass:", address(EnsRegistry(proxyAddr).proPass()));
         console.log("Owner:", EnsRegistry(proxyAddr).owner());
+
+        return address(newImplContract);
     }
 }

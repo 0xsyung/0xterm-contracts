@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {IProPass} from "./IProPass.sol";
 
 /**
  * @title Chat
@@ -18,6 +19,9 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  *      are swept to the owner by withdraw(). Ownership is transferable.
  */
 contract Chat is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+    /// Soft ACK #139 — Sepolia ProPass proxy (immutable in impl bytecode; shared by clones).
+    IProPass public immutable proPass;
+
     uint256 public fee;
 
     struct Message {
@@ -56,11 +60,20 @@ contract Chat is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     event PublicKeyRegistered(address indexed who, bytes key);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    /// @param proPass_ ProPass proxy (e.g. Sepolia 0x509473…FC6e). Immutable in
+    ///        implementation bytecode so EIP-1167 clones share the same gate.
+    constructor(address proPass_) {
+        require(proPass_ != address(0), "Chat: zero proPass");
+        proPass = IProPass(proPass_);
         // The implementation is deployed directly (not through a proxy), so it
         // must not be initializable — locks it forever to prevent a logic-level
         // hijack. Only the proxy is initialized via initialize().
         _disableInitializers();
+    }
+
+    modifier onlyPro() {
+        require(proPass.isPro(msg.sender), "Chat: not Pro");
+        _;
     }
 
     function initialize(uint256 initialFee, string calldata name_) public initializer {
@@ -87,6 +100,7 @@ contract Chat is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function sendMessage(address to, bytes12 iv, bytes calldata senderKey, bytes calldata ciphertext)
         external
         payable
+        onlyPro
         returns (bytes32 id)
     {
         require(msg.value >= fee, "Chat: fee too low");
@@ -121,7 +135,7 @@ contract Chat is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     /// personal-sign, so requiring the wrapper is what makes ecrecover recover
     /// msg.sender. Without this, anyone could register a key for any address and
     /// the ECDH "encryption" would be key-authenticated by nothing (finding C-1).
-    function setPublicKey(bytes calldata key, uint8 v, bytes32 r, bytes32 s) external {
+    function setPublicKey(bytes calldata key, uint8 v, bytes32 r, bytes32 s) external onlyPro {
         require(key.length == 33, "Chat: invalid public key");
         bytes32 msgHash = keccak256(abi.encodePacked(block.chainid, msg.sender, key));
         bytes32 signedHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", msgHash));

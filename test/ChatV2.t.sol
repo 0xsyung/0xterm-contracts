@@ -11,6 +11,8 @@ import {Chat} from "../src/Chat.sol";
 contract ChatV2 is Chat {
     uint256 public extraFeeForTest;
 
+    constructor(address proPass_) Chat(proPass_) {}
+
     function setExtraFeeForTest(uint256 x) external {
         extraFeeForTest = x;
     }

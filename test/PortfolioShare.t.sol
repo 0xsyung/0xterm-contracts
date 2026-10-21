@@ -4,8 +4,9 @@ pragma solidity ^0.8.20;
 import {Test} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {PortfolioShare} from "../src/PortfolioShare.sol";
+import {ProPassTestHelper} from "./ProPassTestHelper.sol";
 
-contract PortfolioShareTest is Test {
+contract PortfolioShareTest is ProPassTestHelper {
     PortfolioShare share;
     address alice = makeAddr("alice");
     address bob = makeAddr("bob");
@@ -15,9 +16,13 @@ contract PortfolioShareTest is Test {
     receive() external payable {}
 
     function setUp() public {
-        PortfolioShare impl = new PortfolioShare();
+        deployProPass();
+        PortfolioShare impl = new PortfolioShare(address(proPass));
         share =
             PortfolioShare(address(new ERC1967Proxy(address(impl), abi.encodeCall(PortfolioShare.initialize, (FEE)))));
+        buyPro(alice, 1);
+        buyPro(bob, 1);
+        buyPro(carol, 1);
     }
 
     function shareAs(address sender, bytes memory card) internal {
@@ -230,5 +235,13 @@ contract PortfolioShareTest is Test {
         vm.expectEmit(true, false, false, true);
         emit PortfolioShare.Unshared(alice);
         share.unshare();
+    }
+
+    function test_Share_NotPro_Reverts() public {
+        address stranger = makeAddr("stranger");
+        vm.deal(stranger, FEE);
+        vm.prank(stranger);
+        vm.expectRevert("PortfolioShare: not Pro");
+        share.share{value: FEE}(hex"01");
     }
 }

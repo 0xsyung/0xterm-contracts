@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {IProPass} from "./IProPass.sol";
 
 /**
  * @title EnsRegistry
@@ -23,6 +24,8 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  *      removes both directions.
  */
 contract EnsRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+    IProPass public immutable proPass;
+
     // namehash(name) => address (forward resolution)
     mapping(bytes32 => address) public addrOf;
     // address => name (reverse resolution, for display in the UI)
@@ -35,8 +38,15 @@ contract EnsRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     event RecordCleared(bytes32 indexed node, address indexed addr);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor(address proPass_) {
+        require(proPass_ != address(0), "ENS: zero proPass");
+        proPass = IProPass(proPass_);
         _disableInitializers();
+    }
+
+    modifier onlyPro() {
+        require(proPass.isPro(msg.sender), "ENS: not Pro");
+        _;
     }
 
     function initialize() public initializer {
@@ -51,7 +61,7 @@ contract EnsRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      * @param who address the name resolves to
      * @param name the human-readable name (for reverse lookup / display)
      */
-    function setRecord(bytes32 node, address who, string calldata name) external {
+    function setRecord(bytes32 node, address who, string calldata name) external onlyPro {
         require(who != address(0), "ENS: zero address");
         require(bytes(name).length > 0, "ENS: empty name");
 
@@ -74,7 +84,7 @@ contract EnsRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /// Remove a record (both directions) if `node` currently resolves to `who`.
-    function clearRecord(bytes32 node, address who) external {
+    function clearRecord(bytes32 node, address who) external onlyPro {
         if (addrOf[node] == who) {
             delete addrOf[node];
             delete nameOf[who];

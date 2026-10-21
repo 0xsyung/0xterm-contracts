@@ -5,8 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Chat} from "../src/Chat.sol";
 import {ChatV2} from "./ChatV2.t.sol";
+import {ProPassTestHelper} from "./ProPassTestHelper.sol";
 
-contract ChatTest is Test {
+contract ChatTest is ProPassTestHelper {
     Chat chat;
     address alice = makeAddr("alice");
     address bob = makeAddr("bob");
@@ -18,7 +19,8 @@ contract ChatTest is Test {
     receive() external payable {}
 
     function setUp() public {
-        Chat impl = new Chat();
+        deployProPass();
+        Chat impl = new Chat(address(proPass));
         chat = Chat(address(new ERC1967Proxy(address(impl), abi.encodeCall(Chat.initialize, (FEE, "test")))));
         aliceKey = 0xA11CE;
         aliceAddr = vm.addr(aliceKey);
@@ -26,6 +28,12 @@ contract ChatTest is Test {
         bob = vm.addr(bobKey);
         malloryKey = 0x44AF;
         malloryAddr = vm.addr(malloryKey);
+        // Soft ACK #139: mutatives require Pro
+        buyPro(alice, 1);
+        buyPro(aliceAddr, 1);
+        buyPro(bob, 1);
+        buyPro(carol, 1);
+        buyPro(malloryAddr, 1);
     }
 
     /// 33-byte compressed secp256k1 public key placeholder (valid length only)
@@ -328,7 +336,7 @@ contract ChatTest is Test {
         sendAs(alice, bob, IV, CT, FEE);
         assertEq(chat.threadCount(bob, alice), 1);
 
-        ChatV2 implV2 = new ChatV2();
+        ChatV2 implV2 = new ChatV2(address(proPass));
         chat.upgradeToAndCall(address(implV2), "");
 
         // v2 exposes a new function (extraFeeForTest) on top of the same layout
@@ -343,10 +351,28 @@ contract ChatTest is Test {
 
     /// only the owner can upgrade
     function test_Upgrade_OnlyOwner() public {
-        ChatV2 implV2 = new ChatV2();
+        ChatV2 implV2 = new ChatV2(address(proPass));
 
         vm.prank(alice);
         vm.expectRevert();
         chat.upgradeToAndCall(address(implV2), "");
+    }
+
+    function test_SendMessage_NotPro_Reverts() public {
+        address stranger = makeAddr("stranger");
+        vm.deal(stranger, FEE);
+        vm.prank(stranger);
+        vm.expectRevert("Chat: not Pro");
+        chat.sendMessage{value: FEE}(bob, IV, SENDER_KEY, CT);
+    }
+
+    function test_SetPublicKey_NotPro_Reverts() public {
+        address stranger = makeAddr("stranger2");
+        uint256 sk = 0x5151;
+        address sa = vm.addr(sk);
+        (uint8 v, bytes32 r, bytes32 s) = signPoP(popDigest(block.chainid, sa, SENDER_KEY), sk);
+        vm.prank(sa);
+        vm.expectRevert("Chat: not Pro");
+        chat.setPublicKey(SENDER_KEY, v, r, s);
     }
 }
