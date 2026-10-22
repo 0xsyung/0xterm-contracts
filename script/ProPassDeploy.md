@@ -117,3 +117,11 @@ Keep storage layout: only **append** new state. Do not reorder existing fields.
   cast send --rpc-url "$SEPOLIA_RPC_URL" --account deployer \
     "$PROXY" "withdraw(address,uint256)" <to> <amount-wei>
   ```
+
+## tokenURI metadata upgrade (Soft ACK #139 Lock I)
+
+After Soft PASS + merge, upgrade the live Sepolia **proxy** so `tokenURI`
+returns on-chain `data:application/json;base64,...` metadata with image
+`https://0xterm.xyz/logo.svg`. See **`ProPassTokenURIUpgrade.md`**
+(`UpgradeProPass.s.sol`, `--account` only).
+

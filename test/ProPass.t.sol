@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
 import {ProPass} from "../src/ProPass.sol";
 import {ProPassV2} from "./ProPassV2.t.sol";
 
@@ -261,6 +262,103 @@ contract ProPassTest is Test {
         assertEq(pro.expiresAt(id), exp);
         assertTrue(pro.isPro(alice));
         assertEq(pro.pricePerPeriod(), PRICE);
+    }
+
+    // --- tokenURI (Soft ACK #139 Lock I) ----------------------------------------
+
+    function test_TokenURI_DataJsonBase64_Fields() public {
+        uint256 t0 = vm.getBlockTimestamp();
+        uint256 id = buyAs(alice, 2);
+        uint64 exp = uint64(t0 + 2 * PERIOD);
+
+        string memory uri = pro.tokenURI(id);
+        assertTrue(_startsWith(uri, "data:application/json;base64,"));
+
+        string memory b64 = _stripPrefix(uri, "data:application/json;base64,");
+        string memory json = string(Base64.decode(b64));
+
+        assertTrue(_contains(json, '"name":"0xterm Pro #1"'));
+        assertTrue(_contains(json, '"image":"https://0xterm.xyz/logo.svg"'));
+        assertTrue(
+            _contains(
+                json, '"description":"0xterm Pro membership. Hold any non-expired pass for Pro access on 0xterm."'
+            )
+        );
+        assertTrue(_contains(json, string(abi.encodePacked('"value":', vm.toString(uint256(exp))))));
+        assertEq(pro.IMAGE_URI(), "https://0xterm.xyz/logo.svg");
+    }
+
+    function test_TokenURI_SharedImage_PerTokenName() public {
+        buyAs(alice, 1);
+        buyAs(bob, 1);
+
+        string memory json1 = string(Base64.decode(_stripPrefix(pro.tokenURI(1), "data:application/json;base64,")));
+        string memory json2 = string(Base64.decode(_stripPrefix(pro.tokenURI(2), "data:application/json;base64,")));
+
+        assertTrue(_contains(json1, '"name":"0xterm Pro #1"'));
+        assertTrue(_contains(json2, '"name":"0xterm Pro #2"'));
+        assertTrue(_contains(json1, '"image":"https://0xterm.xyz/logo.svg"'));
+        assertTrue(_contains(json2, '"image":"https://0xterm.xyz/logo.svg"'));
+    }
+
+    function test_TokenURI_UnknownToken_Reverts() public {
+        vm.expectRevert();
+        pro.tokenURI(999);
+    }
+
+    function test_TokenURI_SurvivesUpgrade() public {
+        uint256 id = buyAs(alice, 1);
+        string memory beforeUri = pro.tokenURI(id);
+
+        ProPassV2 implV2 = new ProPassV2();
+        pro.upgradeToAndCall(address(implV2), "");
+
+        // V2 inherits tokenURI; membership + metadata shape preserved
+        assertEq(pro.tokenURI(id), beforeUri);
+        assertTrue(
+            _contains(
+                string(Base64.decode(_stripPrefix(pro.tokenURI(id), "data:application/json;base64,"))),
+                '"image":"https://0xterm.xyz/logo.svg"'
+            )
+        );
+    }
+
+    function _startsWith(string memory s, string memory prefix) internal pure returns (bool) {
+        bytes memory sb = bytes(s);
+        bytes memory pb = bytes(prefix);
+        if (sb.length < pb.length) return false;
+        for (uint256 i = 0; i < pb.length; i++) {
+            if (sb[i] != pb[i]) return false;
+        }
+        return true;
+    }
+
+    function _stripPrefix(string memory s, string memory prefix) internal pure returns (string memory) {
+        bytes memory sb = bytes(s);
+        bytes memory pb = bytes(prefix);
+        require(sb.length >= pb.length, "prefix");
+        bytes memory out = new bytes(sb.length - pb.length);
+        for (uint256 i = 0; i < out.length; i++) {
+            out[i] = sb[i + pb.length];
+        }
+        return string(out);
+    }
+
+    function _contains(string memory haystack, string memory needle) internal pure returns (bool) {
+        bytes memory h = bytes(haystack);
+        bytes memory n = bytes(needle);
+        if (n.length == 0 || h.length < n.length) return false;
+        for (uint256 i = 0; i <= h.length - n.length; i++) {
+            bool ok = true;
+            for (uint256 j = 0; j < n.length; j++) {
+                if (h[i + j] != n[j]) {
+                    ok = false;
+                    break;
+                }
+            }
+            if (ok) return true;
+        }
+        return false;
     }
 
     // --- enumerable ------------------------------------------------------------

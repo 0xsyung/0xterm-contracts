@@ -7,6 +7,8 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {
     ERC721EnumerableUpgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @title ProPass
@@ -16,10 +18,15 @@ import {
  *      still has expiresAt > block.timestamp. Expired tokens are never auto-burned.
  *
  *      Deploy behind ERC1967Proxy (see DeployProPass.s.sol / ProPassDeploy.md).
+ *      Soft ACK #139 Lock I: on-chain data:application/json;base64 tokenURI
+ *      with shared https://0xterm.xyz/logo.svg image.
  */
 contract ProPass is Initializable, ERC721EnumerableUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
     /// Max periods purchasable in a single tx (Soft ACK lock).
     uint256 public constant MAX_PERIODS = 24;
+
+    /// Canonical brand icon for every ProPass (Soft ACK #139 Lock I).
+    string public constant IMAGE_URI = "https://0xterm.xyz/logo.svg";
 
     uint256 public pricePerPeriod;
     uint64 public periodSeconds;
@@ -85,10 +92,26 @@ contract ProPass is Initializable, ERC721EnumerableUpgradeable, OwnableUpgradeab
         return false;
     }
 
-    /// Stub / static URI for v1 (Design locks metadata later).
+    /**
+     * @notice ERC-721 metadata as on-chain `data:application/json;base64,...`.
+     *         Shared logo for all tokens; optional `expiresAt` attribute (unix).
+     */
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         _requireOwned(tokenId);
-        return "";
+        uint64 exp = _expiresAt[tokenId];
+        string memory json = string(
+            abi.encodePacked(
+                '{"name":"0xterm Pro #',
+                Strings.toString(tokenId),
+                '","description":"0xterm Pro membership. Hold any non-expired pass for Pro access on 0xterm.",',
+                '"image":"',
+                IMAGE_URI,
+                '","attributes":[{"trait_type":"expiresAt","display_type":"date","value":',
+                Strings.toString(uint256(exp)),
+                "}]}"
+            )
+        );
+        return string(abi.encodePacked("data:application/json;base64,", Base64.encode(bytes(json))));
     }
 
     function setPricePerPeriod(uint256 newPrice) external onlyOwner {
