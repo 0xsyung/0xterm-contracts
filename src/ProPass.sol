@@ -18,15 +18,16 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
  *      still has expiresAt > block.timestamp. Expired tokens are never auto-burned.
  *
  *      Deploy behind ERC1967Proxy (see DeployProPass.s.sol / ProPassDeploy.md).
- *      Soft ACK #139 Lock I: on-chain data:application/json;base64 tokenURI
- *      with shared https://0xterm.xyz/logo.svg image.
+ *      Soft ACK #139 Lock I: on-chain data:application/json;base64 tokenURI.
+ *      Soft ACK MetaMask IMAGE_URI: dedicated PNG (not logo.svg) —
+ *      https://0xterm.xyz/propass.png (Soft ACK Design 6357300710).
  */
 contract ProPass is Initializable, ERC721EnumerableUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
     /// Max periods purchasable in a single tx (Soft ACK lock).
     uint256 public constant MAX_PERIODS = 24;
 
-    /// Canonical brand icon for every ProPass (Soft ACK #139 Lock I).
-    string public constant IMAGE_URI = "https://0xterm.xyz/logo.svg";
+    /// Dedicated MetaMask-safe ProPass image (Soft ACK Design — PNG, explicit colors).
+    string public constant IMAGE_URI = "https://0xterm.xyz/propass.png";
 
     uint256 public pricePerPeriod;
     uint64 public periodSeconds;
@@ -94,7 +95,7 @@ contract ProPass is Initializable, ERC721EnumerableUpgradeable, OwnableUpgradeab
 
     /**
      * @notice ERC-721 metadata as on-chain `data:application/json;base64,...`.
-     *         Shared logo for all tokens; optional `expiresAt` attribute (unix).
+     *         Shared IMAGE_URI for all tokens; optional `expiresAt` attribute (unix).
      */
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         _requireOwned(tokenId);
