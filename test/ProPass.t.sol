@@ -278,14 +278,14 @@ contract ProPassTest is Test {
         string memory json = string(Base64.decode(b64));
 
         assertTrue(_contains(json, '"name":"0xterm Pro #1"'));
-        assertTrue(_contains(json, '"image":"https://0xterm.xyz/logo.svg"'));
+        assertTrue(_contains(json, '"image":"https://0xterm.xyz/propass.png"'));
         assertTrue(
             _contains(
                 json, '"description":"0xterm Pro membership. Hold any non-expired pass for Pro access on 0xterm."'
             )
         );
         assertTrue(_contains(json, string(abi.encodePacked('"value":', vm.toString(uint256(exp))))));
-        assertEq(pro.IMAGE_URI(), "https://0xterm.xyz/logo.svg");
+        assertEq(pro.IMAGE_URI(), "https://0xterm.xyz/propass.png");
     }
 
     function test_TokenURI_SharedImage_PerTokenName() public {
@@ -297,8 +297,8 @@ contract ProPassTest is Test {
 
         assertTrue(_contains(json1, '"name":"0xterm Pro #1"'));
         assertTrue(_contains(json2, '"name":"0xterm Pro #2"'));
-        assertTrue(_contains(json1, '"image":"https://0xterm.xyz/logo.svg"'));
-        assertTrue(_contains(json2, '"image":"https://0xterm.xyz/logo.svg"'));
+        assertTrue(_contains(json1, '"image":"https://0xterm.xyz/propass.png"'));
+        assertTrue(_contains(json2, '"image":"https://0xterm.xyz/propass.png"'));
     }
 
     function test_TokenURI_UnknownToken_Reverts() public {
@@ -318,7 +318,7 @@ contract ProPassTest is Test {
         assertTrue(
             _contains(
                 string(Base64.decode(_stripPrefix(pro.tokenURI(id), "data:application/json;base64,"))),
-                '"image":"https://0xterm.xyz/logo.svg"'
+                '"image":"https://0xterm.xyz/propass.png"'
             )
         );
     }
